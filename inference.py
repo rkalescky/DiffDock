@@ -1,6 +1,7 @@
 import functools
 import logging
 import pprint
+import random
 import traceback
 from argparse import ArgumentParser, Namespace, FileType
 import copy
@@ -76,6 +77,7 @@ def get_parser():
     parser.add_argument('--confidence_ckpt', type=str, default='best_model.pt', help='Checkpoint to use for the confidence model')
 
     parser.add_argument('--batch_size', type=int, default=10, help='')
+    parser.add_argument('--seed', type=int, default=1, help='Random seed for deterministic inference')
     parser.add_argument('--no_final_step_noise', action='store_true', default=True, help='Use no noise in the final step of the reverse diffusion')
     parser.add_argument('--inference_steps', type=int, default=20, help='Number of denoising steps')
     parser.add_argument('--actual_steps', type=int, default=None, help='Number of denoising steps that are actually performed')
@@ -119,6 +121,13 @@ def main(args):
                     arg_dict[key].append(v)
             else:
                 arg_dict[key] = value
+
+    seed = int(args.seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
     # Download models if they don't exist locally
     if not os.path.exists(args.model_dir):

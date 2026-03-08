@@ -361,6 +361,16 @@ class OldTensorProductConvLayer(torch.nn.Module):
         # Break up the edge_attr into chunks to limit the maximum memory usage
         edge_chunk_size = 100_000
         num_edges = edge_attr.shape[0]
+        if num_edges == 0:
+            if out_nodes is None:
+                out_nodes = node_attr.shape[0]
+            out = node_attr.new_zeros((out_nodes, self.tp.irreps_out.dim))
+            if self.residual:
+                padded = F.pad(node_attr, (0, out.shape[-1] - node_attr.shape[-1]))
+                out = out + padded
+            if self.batch_norm:
+                out = self.batch_norm(out)
+            return out.to(node_attr.dtype)
         num_chunks = (num_edges // edge_chunk_size) if num_edges % edge_chunk_size == 0 \
             else (num_edges // edge_chunk_size) + 1
         edge_ranges = np.array_split(np.arange(num_edges), num_chunks)
